@@ -1,54 +1,53 @@
 version: 1
 
-applications:
-  - frontend:
-      phases:
-        preBuild:
-          commands:
-            # Use Node 22 (Amplify defaults to 18, .nvmrc has 22)
-            - nvm install 22
-            - nvm use 22
-            - node --version
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # Use Node 22 (Amplify defaults to 18, .nvmrc has 22)
+        - nvm install 22
+        - nvm use 22
+        - node --version
 
-            # Enable corepack so pnpm 9.15.0 is used (from packageManager field)
-            - corepack enable
-            - corepack prepare pnpm@9.15.0 --activate
-            - pnpm --version
+        # Enable corepack so pnpm 9.15.0 is used (from packageManager field)
+        - corepack enable
+        - corepack prepare pnpm@9.15.0 --activate
+        - pnpm --version
 
-            # Install all workspace dependencies
-            - pnpm install --frozen-lockfile
+        # Install all workspace dependencies
+        - pnpm install --frozen-lockfile
 
-            # Build the design system first (dependency of @martech/web)
-            - pnpm ds:build
+        # Build the design system first (dependency of @martech/web)
+        - pnpm ds:build
 
-        build:
-          commands:
-            - pnpm --filter @martech/web build
+    build:
+      commands:
+        - pnpm --filter @martech/web build
 
-      artifacts:
-        baseDirectory: apps/web/.next
-        files:
-          - "**/*"
+  artifacts:
+    baseDirectory: apps/web/.next
+    files:
+      - "**/*"
 
-      cache:
-        paths:
-          - node_modules/**/*
-          - apps/web/.next/cache/**/*
-          - packages/design-system/dist/**/*
+  cache:
+    paths:
+      - node_modules/**/*
+      - apps/web/.next/cache/**/*
+      - packages/design-system/dist/**/*
 
-      buildSizeConfig:
-        maxIndividualAsset: 50000000
+  buildSizeConfig:
+    maxIndividualAsset: 50000000
 
-    # Environment variable mapping:
-    # Set these in Amplify Console → App settings → Environment variables
-    # - FIGMA_API_TOKEN
-    # - FIGMA_DS_FILE_KEY
-    # - FIGMA_WEBHOOK_SECRET
-    # - OPENAI_API_KEY
-    # - OPENAI_MODEL
-    # - NEXT_PUBLIC_SEGMENT_WRITE_KEY
-    # - GITHUB_TOKEN
+# Environment variable mapping:
+# Set these in Amplify Console -> App settings -> Environment variables
+# - FIGMA_API_TOKEN
+# - FIGMA_DS_FILE_KEY
+# - FIGMA_WEBHOOK_SECRET
+# - OPENAI_API_KEY
+# - OPENAI_MODEL
+# - NEXT_PUBLIC_SEGMENT_WRITE_KEY
+# - GITHUB_TOKEN
 
-    # Branch deployment rules:
-    # main        → Production
-    # design/*    → Preview environments (auto-created per design branch)
+# Branch deployment rules:
+# main        -> Production
+# design/*    -> Preview environments (auto-created per design branch)
