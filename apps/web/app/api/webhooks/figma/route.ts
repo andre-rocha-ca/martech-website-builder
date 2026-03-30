@@ -223,6 +223,7 @@ async function processWebhookAsync(
       branch: gitResult.branchName,
       commitSha: gitResult.commitSha,
       filesWritten: gitResult.filesWritten,
+      previewUrl: gitResult.previewUrl,
       totalDurationMs: totalDuration,
     });
   } catch (err) {

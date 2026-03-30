@@ -1,27 +1,41 @@
 version: 1
 
 applications:
-  - appRoot: apps/web
-    frontend:
+  - frontend:
       phases:
         preBuild:
           commands:
-            # Install pnpm and dependencies for the full monorepo
-            - npm install -g pnpm@9
-            - cd ../.. && pnpm install --frozen-lockfile
-            # Build the design system first (dependency of web)
-            - cd ../.. && pnpm ds:build
+            # Use Node 22 (Amplify defaults to 18, .nvmrc has 22)
+            - nvm install 22
+            - nvm use 22
+            - node --version
+
+            # Enable corepack so pnpm 9.15.0 is used (from packageManager field)
+            - corepack enable
+            - corepack prepare pnpm@9.15.0 --activate
+            - pnpm --version
+
+            # Install all workspace dependencies
+            - pnpm install --frozen-lockfile
+
+            # Build the design system first (dependency of @martech/web)
+            - pnpm ds:build
+
         build:
           commands:
-            - cd ../.. && pnpm --filter @martech/web build
+            - pnpm --filter @martech/web build
+
       artifacts:
-        baseDirectory: .next
+        baseDirectory: apps/web/.next
         files:
           - "**/*"
+
       cache:
         paths:
-          - ../../node_modules/**/*
-          - .next/cache/**/*
+          - node_modules/**/*
+          - apps/web/.next/cache/**/*
+          - packages/design-system/dist/**/*
+
       buildSizeConfig:
         maxIndividualAsset: 50000000
 

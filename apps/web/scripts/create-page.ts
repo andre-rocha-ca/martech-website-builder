@@ -163,6 +163,7 @@ What happens:
     }
 
     // Step 3: Publish
+    let previewUrl: string | null = null;
     if (opts.noGit) {
       console.log("⏳ [3/3] Writing files locally...");
       const files = await writeGeneratedFiles(result);
@@ -170,6 +171,7 @@ What happens:
     } else {
       console.log("⏳ [3/3] Publishing to git → Amplify auto-deploys...");
       const gitResult = await gitPublish(fileKey, result);
+      previewUrl = gitResult.previewUrl;
       console.log(`✅ Branch: ${gitResult.branchName}`);
       console.log(`   Commit: ${gitResult.commitSha}`);
       console.log(`   Files: ${gitResult.filesWritten}`);
@@ -198,6 +200,14 @@ What happens:
 
     if (!opts.noGit) {
       console.log("🚀 Amplify will auto-deploy the preview environment.");
+      if (previewUrl) {
+        console.log("");
+        console.log("════════════════════════════════════════════════════");
+        console.log("  PREVIEW URL (available after Amplify deploys):");
+        console.log(`  ${previewUrl}`);
+        console.log("  (Allow 2-5 minutes for build + deploy)");
+        console.log("════════════════════════════════════════════════════");
+      }
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
