@@ -1,4 +1,9 @@
 #!/usr/bin/env tsx
+import { config } from "dotenv";
+import { resolve } from "path";
+// Load .env from monorepo root (2 levels up from packages/design-system/scripts/)
+config({ path: resolve(__dirname, "../../../.env") });
+
 // ─── Figma → Design System Component Sync ───────────────────
 //
 // This script detects changes in Figma components and uses
@@ -397,41 +402,115 @@ async function main() {
   const fileData = await figmaFetch<FigmaFileResponse>(`/files/${fileKey}`);
   const componentsMeta = await figmaFetch<FigmaFileComponents>(`/files/${fileKey}/components`);
 
-  console.log(
-    `Found ${componentsMeta.meta.components.length} components, ${componentsMeta.meta.component_sets.length} component sets`
-  );
+  // Normalize response — component_sets may not exist in all API responses
+  const components = componentsMeta?.meta?.components ?? [];
+  const componentSets = componentsMeta?.meta?.component_sets ?? [];
 
-  // 3. Build component mappings
+  console.log(`Found ${components.length} components, ${componentSets.length} component sets`);
+
+  // 3. Build component mappings — group variants into single components
+  //
+  // Figma returns individual variants as separate components with names like:
+  //   "State=Default, size=MD, color=azul, Style=round, Type=Primary"
+  // We detect the variant pattern (key=value pairs) and group them by
+  // their containing_frame (parent component) or by base name.
+
+  const VARIANT_PATTERN = /^[A-Za-z_]+=.+/;
+
+  function isVariantName(name: string): boolean {
+    return VARIANT_PATTERN.test(name) || (name.includes(", ") && name.includes("="));
+  }
+
+  function getBaseComponentName(comp: {
+    name: string;
+    containing_frame?: { name: string };
+  }): string | null {
+    // If it has a containing frame that isn't a page, use that as the group
+    if (
+      comp.containing_frame?.name &&
+      !comp.containing_frame.name.match(/^(Page|Canvas|Frame)\s/i)
+    ) {
+      return comp.containing_frame.name;
+    }
+    // If name is a variant pattern, extract the first meaningful part
+    if (isVariantName(comp.name)) {
+      // Try to find the parent from the containing_frame
+      return comp.containing_frame?.name || null;
+    }
+    return null;
+  }
+
+  // Group components: variants → parent component, standalone → individual
+  const groups = new Map<
+    string,
+    {
+      baseName: string;
+      nodeId: string;
+      key: string;
+      variants: string[];
+    }
+  >();
+  const standaloneComponents: typeof components = [];
+
+  for (const comp of components) {
+    const baseName = getBaseComponentName(comp);
+
+    if (baseName && isVariantName(comp.name)) {
+      // This is a variant — group under the base component
+      const existing = groups.get(baseName);
+      if (existing) {
+        existing.variants.push(comp.name);
+      } else {
+        groups.set(baseName, {
+          baseName,
+          nodeId: comp.node_id,
+          key: comp.key,
+          variants: [comp.name],
+        });
+      }
+    } else {
+      // Standalone component (not a variant)
+      standaloneComponents.push(comp);
+    }
+  }
+
+  // Also add any component sets from the API
+  for (const set of componentSets) {
+    if (!groups.has(set.name)) {
+      const variants = components
+        .filter((c) => c.containing_frame?.name === set.name)
+        .map((c) => c.name);
+      groups.set(set.name, {
+        baseName: set.name,
+        nodeId: set.node_id,
+        key: set.key,
+        variants,
+      });
+    }
+  }
+
   const currentComponents: FigmaComponentMapping[] = [];
 
-  // Map component sets (components with variants)
-  for (const set of componentsMeta.meta.component_sets) {
-    const fileName = toFileName(set.name);
-    const exportName = toExportName(set.name);
-    const variants = componentsMeta.meta.components
-      .filter((c) => c.containing_frame?.name === set.name)
-      .map((c) => c.name);
+  // Add grouped components (with variants)
+  for (const [, group] of groups) {
+    const fileName = toFileName(group.baseName);
+    const exportName = toExportName(group.baseName);
 
     currentComponents.push({
-      figmaNodeId: set.node_id,
-      figmaKey: set.key,
-      figmaName: set.name,
+      figmaNodeId: group.nodeId,
+      figmaKey: group.key,
+      figmaName: group.baseName,
       localPath: `src/components/ui/${fileName}.tsx`,
       exportName,
       lastSyncedVersion: fileData.version,
       lastSyncedAt: new Date().toISOString(),
       hasVariants: true,
-      variantProperties: variants,
+      variantProperties: group.variants,
     });
   }
 
-  // Map standalone components (no variant set)
-  for (const comp of componentsMeta.meta.components) {
-    const isInSet = componentsMeta.meta.component_sets.some(
-      (s) => comp.containing_frame?.name === s.name
-    );
-    if (isInSet) continue;
-
+  // Add standalone components
+  for (const comp of standaloneComponents) {
     const fileName = toFileName(comp.name);
     const exportName = toExportName(comp.name);
 
@@ -446,6 +525,10 @@ async function main() {
       hasVariants: false,
     });
   }
+
+  console.log(
+    `Grouped into ${currentComponents.length} components (${groups.size} with variants, ${standaloneComponents.length} standalone)`
+  );
 
   // 4. Calculate diff
   const diff = calculateDiff(currentComponents, manifest);
