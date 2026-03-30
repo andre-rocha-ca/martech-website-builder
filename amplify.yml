@@ -3,35 +3,22 @@ version: 1
 applications:
   - appRoot: apps/web
     frontend:
+      buildPath: /
       phases:
         preBuild:
           commands:
-            # Use Node 22
             - nvm install 22
             - nvm use 22
-            - node --version
-
-            # Install pnpm (exact version from packageManager field)
-            - npm install -g pnpm@9.15.0
-
-            # Install all deps + build design system from monorepo root (one command to preserve CWD)
-            - cd ../.. && pnpm install --frozen-lockfile && pnpm ds:build
-
+            - npm install -g pnpm
+            - pnpm install --frozen-lockfile
+            - pnpm ds:build
         build:
           commands:
-            # Run next build directly from appRoot — pnpm symlinks make next available here
-            - npx next build
-
+            - pnpm --filter @martech/web build
       artifacts:
-        baseDirectory: .next
+        baseDirectory: apps/web/.next
         files:
           - "**/*"
-
       cache:
         paths:
-          - ../../node_modules/**/*
-          - .next/cache/**/*
-          - ../../packages/design-system/dist/**/*
-
-      buildSizeConfig:
-        maxIndividualAsset: 50000000
+          - node_modules/**/*
