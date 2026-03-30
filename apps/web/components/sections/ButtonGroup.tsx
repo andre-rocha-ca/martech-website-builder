@@ -1,3 +1,5 @@
+"use client";
+
 // ButtonGroup component with tracking
 import { Button } from "@martech/design-system";
 import { trackButtonClick } from "@/components/layout/SegmentScript";
