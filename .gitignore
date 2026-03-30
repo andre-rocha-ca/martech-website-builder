@@ -1,0 +1,52 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# build outputs
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# environment
+.env
+.env*.local
+
+# pnpm
+.pnpm-store/
+
+# turbo
+.turbo/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# test
+coverage/
+
+# misc
+*.pem
+.vercel
+next-env.d.ts
+
+# test pipeline output
+.test-output/
+
+# auto-generated metadata
+.design-metadata.json
+.figma-sync-manifest.json

@@ -1,0 +1,318 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── ContaAzul Brand Fonts ──────────────────────────────── */
+/* "Ping Pong" is ContaAzul's proprietary body font.
+   Place the font files in apps/web/public/fonts/ to activate.
+   Expected filenames (woff2 preferred):
+     PingPong-Light.woff2      (weight 300)
+     PingPong-Regular.woff2    (weight 400)
+     PingPong-Medium.woff2     (weight 500)
+     PingPong-Bold.woff2       (weight 700)
+   Until files are present the stack falls back to Inter. */
+
+@font-face {
+  font-family: "Ping Pong";
+  src: url("/fonts/PingPong-Light.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ping Pong";
+  src: url("/fonts/PingPong-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ping Pong";
+  src: url("/fonts/PingPong-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Ping Pong";
+  src: url("/fonts/PingPong-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ─── CA Design tokens ───────────────────────────────────── */
+:root {
+  --amarelo-amanhecer: #f9bd1d;
+  --azul-ca-base: #2687e9;
+  --gray-600: #20262b;
+  --gray-500: #35414b;
+  --green-100: #33cc66;
+  --font-raleway: "Raleway", sans-serif;
+  --font-ping-pong: "Ping Pong", "Inter", var(--font-inter), sans-serif;
+}
+
+/* ─── shadcn/ui CSS Variables (Zinc theme) ───────────────── */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+
+    /* ─── Brand Design Tokens (overridden by Figma pipeline) ── */
+    --color-brand-primary: #6366f1;
+    --color-brand-secondary: #8b5cf6;
+    --color-brand-accent: #ec4899;
+    --font-heading: "Inter", system-ui, sans-serif;
+    --font-body: "Inter", system-ui, sans-serif;
+    --font-sans: "Inter", system-ui, sans-serif;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* ─── Utility Layers ─────────────────────────────────────── */
+
+@layer components {
+  .section-container {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* ─── CA Desktop Grid ──────────────────────────────────────
+   * 12 columns · max-width 1296px · gutter 32px
+   * The outer wrapper is centered with px-0 (padding handled by gutter).
+   * On mobile it collapses to a single column with 16px side padding.
+   *
+   * Usage:
+   *   <div className="ca-grid">          ← 12-col grid
+   *     <div className="ca-col-4">…</div>  ← 4 cols wide
+   *     <div className="ca-col-8">…</div>  ← 8 cols wide
+   *   </div>
+   *
+   *   Span helpers: ca-col-1 … ca-col-12
+   *   Full-width section wrapper: ca-section
+   * ─────────────────────────────────────────────────────── */
+
+  .ca-container {
+    /* Centers content, enforces max-width, zero horizontal padding
+       (gutter between columns provides the breathing room on desktop) */
+    @apply mx-auto w-full;
+    max-width: 1296px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* On smaller screens add side padding so content doesn't touch edges */
+  @media (max-width: 1296px) {
+    .ca-container {
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+  }
+  @media (max-width: 640px) {
+    .ca-container {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+  }
+
+  .ca-grid {
+    /* 12-column grid with 32px gutters */
+    @apply ca-container grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 32px;
+  }
+
+  /* Column span helpers */
+  .ca-col-1 {
+    grid-column: span 1;
+  }
+  .ca-col-2 {
+    grid-column: span 2;
+  }
+  .ca-col-3 {
+    grid-column: span 3;
+  }
+  .ca-col-4 {
+    grid-column: span 4;
+  }
+  .ca-col-5 {
+    grid-column: span 5;
+  }
+  .ca-col-6 {
+    grid-column: span 6;
+  }
+  .ca-col-7 {
+    grid-column: span 7;
+  }
+  .ca-col-8 {
+    grid-column: span 8;
+  }
+  .ca-col-9 {
+    grid-column: span 9;
+  }
+  .ca-col-10 {
+    grid-column: span 10;
+  }
+  .ca-col-11 {
+    grid-column: span 11;
+  }
+  .ca-col-12 {
+    grid-column: span 12;
+  }
+
+  /* Full-bleed section wrapper — centers .ca-grid inside */
+  .ca-section {
+    @apply flex w-full justify-center;
+  }
+}
+
+/* ─── ContaAzul Animations ───────────────────────────────── */
+
+@keyframes ca-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ca-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ca-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Entrance utilities — applied when JS adds .ca-animate-in */
+.ca-animate-ready {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ca-animate-ready.ca-animate-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered delay helpers */
+.ca-delay-100 {
+  transition-delay: 100ms;
+}
+.ca-delay-200 {
+  transition-delay: 200ms;
+}
+.ca-delay-300 {
+  transition-delay: 300ms;
+}
+.ca-delay-400 {
+  transition-delay: 400ms;
+}
+.ca-delay-500 {
+  transition-delay: 500ms;
+}
+
+/* Icon color filter helpers — works on any SVG served as <img> */
+.icon-white {
+  /* #536574 → white */
+  filter: brightness(0) invert(1);
+}
+.icon-blue {
+  /* #536574 → #2687e9 (azul_ca_base) */
+  filter: brightness(0) saturate(100%) invert(44%) sepia(77%) saturate(488%) hue-rotate(184deg)
+    brightness(91%) contrast(97%);
+}
+.icon-yellow {
+  /* #536574 → #f9bd1d (amarelo_amanhecer) */
+  filter: brightness(0) saturate(100%) invert(78%) sepia(61%) saturate(500%) hue-rotate(1deg)
+    brightness(103%) contrast(97%);
+}
+.icon-dark {
+  /* #536574 → #20262b (gray/600) */
+  filter: brightness(0) saturate(100%) invert(12%) sepia(10%) saturate(600%) hue-rotate(165deg)
+    brightness(95%) contrast(95%);
+}
+
+/* FAQ accordion grid trick */
+.faq-body-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.faq-body-grid.open {
+  grid-template-rows: 1fr;
+}
+.faq-body-grid > div {
+  overflow: hidden;
+}

@@ -1,0 +1,49 @@
+{
+  "name": "@martech/web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AI-powered page builder — generates Next.js pages from Figma using @martech/design-system",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "generate": "tsx scripts/generate-design.ts",
+    "create-page": "tsx scripts/create-page.ts",
+    "generate:extract": "tsx scripts/extract-figma.ts",
+    "generate:code": "tsx scripts/generate-code.ts",
+    "webhook:verify": "tsx scripts/verify-webhook.ts",
+    "test-pipeline": "tsx scripts/test-pipeline.ts",
+    "test-pipeline:extract": "tsx scripts/test-pipeline.ts --extract-only",
+    "download-assets": "tsx scripts/download-assets.ts",
+    "clean": "rm -rf .next"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@martech/design-system": "workspace:*",
+    "dotenv": "^17.3.1",
+    "lucide-react": "^0.468.0",
+    "next": "^15.1.0",
+    "openai": "^4.77.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.0",
+    "sharp": "^0.33.0",
+    "simple-git": "^3.27.0",
+    "tailwindcss-animate": "^1.0.7",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^15.1.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
