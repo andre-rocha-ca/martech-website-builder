@@ -72,10 +72,17 @@ export async function extractDesignFromFigma(fileKey: string): Promise<DesignFil
     // 5. Download assets
     const assets = await downloadAssets(fileKey, imageNodeIds);
 
-    // 6. Export frame screenshots for vision-based generation
+    // 6. Export frame screenshots for vision-based generation (non-fatal)
     //    This gives the AI a visual reference for each frame so it
     //    can produce pixel-perfect output instead of guessing from JSON.
-    const frameScreenshots = await exportFrameScreenshots(fileKey, pages);
+    let frameScreenshots: Record<string, string> = {};
+    try {
+      frameScreenshots = await exportFrameScreenshots(fileKey, pages);
+    } catch (err) {
+      log.warn("Frame screenshot export failed — continuing without vision", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
 
     return {
       id: fileKey,
@@ -107,17 +114,19 @@ async function exportFrameScreenshots(
 
   if (frameIds.length === 0) return {};
 
-  // Batch export — Figma allows up to 50 node IDs per request
-  const screenshots: Record<string, string> = {};
-  const batchSize = 50;
+  // Limit to first 10 frames to avoid Figma render timeout
+  const limitedIds = frameIds.slice(0, 10);
 
-  for (let i = 0; i < frameIds.length; i += batchSize) {
-    const batch = frameIds.slice(i, i + batchSize);
+  const screenshots: Record<string, string> = {};
+  const batchSize = 5;
+
+  for (let i = 0; i < limitedIds.length; i += batchSize) {
+    const batch = limitedIds.slice(i, i + batchSize);
     const idsParam = batch.map((id) => id.replace(":", "-")).join(",");
 
     try {
       const response = await figmaFetch<FigmaImageResponse>(
-        `/images/${fileKey}?ids=${idsParam}&format=png&scale=1`
+        `/images/${fileKey}?ids=${idsParam}&format=png&scale=0.5`
       );
 
       if (response.err) {
@@ -426,16 +435,16 @@ async function downloadAssets(fileKey: string, nodeIds: string[]): Promise<Desig
 
   log.info("Downloading assets", { count: nodeIds.length });
 
-  // Request image URLs from Figma (batch up to 50 at a time)
+  // Request image URLs from Figma (small batches to avoid render timeout)
   const assets: DesignAsset[] = [];
-  const batchSize = 50;
+  const batchSize = 10;
 
   for (let i = 0; i < nodeIds.length; i += batchSize) {
     const batch = nodeIds.slice(i, i + batchSize);
     const idsParam = batch.join(",");
 
     const imageResponse = await figmaFetch<FigmaImageResponse>(
-      `/images/${fileKey}?ids=${idsParam}&format=png&scale=2`
+      `/images/${fileKey}?ids=${idsParam}&format=png&scale=1`
     );
 
     if (imageResponse.err) {
