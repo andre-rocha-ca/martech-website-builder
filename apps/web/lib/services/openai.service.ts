@@ -150,6 +150,32 @@ Return a valid JSON object with this exact structure:
 }`;
 }
 
+// ─── Prompt Size Management ─────────────────────────────────
+
+/** Rough token estimate: ~4 chars per token for English/JSON */
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+/** Truncate deeply nested elements to keep prompt within token budget */
+function truncateElements(
+  elements: unknown[],
+  maxDepth: number = 3,
+  currentDepth: number = 0
+): unknown[] {
+  if (currentDepth >= maxDepth) return [{ _truncated: true, count: elements.length }];
+  return elements.slice(0, 20).map((el: unknown) => {
+    const element = el as Record<string, unknown>;
+    if (Array.isArray(element.children) && element.children.length > 0) {
+      return {
+        ...element,
+        children: truncateElements(element.children, maxDepth, currentDepth + 1),
+      };
+    }
+    return element;
+  });
+}
+
 // ─── Prompt Builder ─────────────────────────────────────────
 
 function buildGenerationPrompt(designFile: DesignFile): string {
@@ -171,12 +197,14 @@ ${JSON.stringify(designFile.designTokens, null, 2)}
 
 ## Pages to Generate
 ${designFile.pages
+  .slice(0, 5)
   .map(
     (page) => `
 ### Page: "${page.name}" (route: /${page.slug})
 Frames: ${page.frames.length}
 
 ${page.frames
+  .slice(0, 10)
   .map(
     (frame) => `
 #### Frame: "${frame.name}" (${frame.width}x${frame.height})
@@ -184,7 +212,7 @@ Background: ${frame.backgroundColor}
 
 Elements:
 \`\`\`json
-${JSON.stringify(frame.elements, null, 2)}
+${JSON.stringify(truncateElements(frame.elements), null, 2)}
 \`\`\`
 `
   )
@@ -233,7 +261,58 @@ async function callOpenAI(designFile: DesignFile): Promise<string> {
   log.info("Calling OpenAI API for code generation", { model, screenshotCount });
 
   const systemPrompt = buildSystemPrompt();
-  const textPrompt = buildGenerationPrompt(designFile);
+  let textPrompt = buildGenerationPrompt(designFile);
+
+  // Token budget: keep system + user text under ~90k tokens (leaving room for images + completion)
+  const MAX_PROMPT_TOKENS = 90000;
+  const systemTokens = estimateTokens(systemPrompt);
+  const userTokens = estimateTokens(textPrompt);
+  const totalTokens = systemTokens + userTokens;
+
+  log.info("Prompt token estimate", { systemTokens, userTokens, totalTokens });
+
+  if (totalTokens > MAX_PROMPT_TOKENS) {
+    // Aggressively truncate: send only page/frame names without element details
+    log.warn("Prompt exceeds token budget — sending summarized design data", {
+      totalTokens,
+      maxTokens: MAX_PROMPT_TOKENS,
+    });
+
+    textPrompt = `Generate Next.js pages from this Figma design. Use the frame screenshots (attached below) as the primary visual reference.
+
+## Design File: ${designFile.name} (v${designFile.version})
+
+## Design Tokens
+\`\`\`json
+${JSON.stringify(designFile.designTokens, null, 2)}
+\`\`\`
+
+## Pages
+${designFile.pages
+  .slice(0, 5)
+  .map(
+    (page) =>
+      `- "${page.name}" → /${page.slug} (${page.frames.length} frames: ${page.frames
+        .slice(0, 10)
+        .map((f) => f.name)
+        .join(", ")})`
+  )
+  .join("\n")}
+
+## Available Assets
+${designFile.assets
+  .slice(0, 20)
+  .map((a) => `- ${a.name}: ${a.localPath}`)
+  .join("\n")}
+
+## Requirements
+1. PIXEL-PERFECT from the attached screenshots
+2. MOBILE-FIRST responsive (sm:/md:/lg:/xl:)
+3. Use @martech/design-system components (Button, Card, Badge, Input, etc.)
+4. Segment tracking on all interactions
+5. "use client" for interactive components
+6. Return ONLY JSON output`;
+  }
 
   // Build multimodal user content: text prompt first, then one image per frame
   const userContent: ContentPart[] = [{ type: "text", text: textPrompt }];
