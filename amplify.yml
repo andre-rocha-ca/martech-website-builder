@@ -15,15 +15,13 @@ applications:
             - npm install -g pnpm@9.15.0
             - pnpm --version
 
-            # Debug: verify monorepo root is reachable
-            - echo "appRoot CWD=$(pwd)" && echo "monorepo root=$(cd ../.. && pwd)" && ls ../../package.json
-
             # Install deps + build DS in one command (CWD resets between commands)
             - cd ../.. && pnpm install --frozen-lockfile && pnpm ds:build
 
         build:
           commands:
-            - cd ../.. && pnpm --filter @martech/web build
+            # Chain with pnpm install to ensure PATH includes node_modules/.bin
+            - cd ../.. && pnpm install && pnpm --filter @martech/web build
 
       artifacts:
         baseDirectory: .next
