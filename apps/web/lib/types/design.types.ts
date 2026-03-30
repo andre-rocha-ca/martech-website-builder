@@ -144,8 +144,11 @@ export interface GeneratedComponent {
 }
 
 export interface GenerationMetadata {
-  figmaFileId: string;
-  figmaVersion: string;
+  source: "figma" | "prompt";
+  figmaFileId?: string;
+  figmaVersion?: string;
+  promptText?: string;
+  promptHash?: string;
   generatedAt: string;
   generationDurationMs: number;
   componentCount: number;

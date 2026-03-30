@@ -24,7 +24,15 @@ const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 function buildSystemPrompt(): string {
   const registry = serializeRegistryForPrompt(componentDocRegistry);
 
-  return `You are an expert React/Next.js developer generating production-ready pages from Figma design data. Your output must be PIXEL-PERFECT with the Figma design, MOBILE-FIRST, and FULLY TRACKED with Segment analytics.
+  return `You are an expert React/Next.js developer generating production-ready landing pages. You generate pages either from a text prompt description or from Figma design data. Your output must be PIXEL-PERFECT (when from Figma) or PROFESSIONALLY DESIGNED (when from a prompt), MOBILE-FIRST, and FULLY TRACKED with Segment analytics.
+
+═══ PROMPT MODE (when no Figma data is provided) ══════════════
+When generating from a text description:
+- Create original, professional content that matches the prompt
+- Invent realistic placeholder text, headings, and CTAs relevant to the described product/feature
+- Choose appropriate DS components and structure sections logically
+- Generate a URL-friendly slug from the page topic
+- Include a Navbar, Hero, 2-3 content sections, and a CTA section as the default structure
 
 ═══ CORE RULES ═══════════════════════════════════════════════
 
@@ -476,6 +484,7 @@ export async function generateCodeFromDesign(designFile: DesignFile): Promise<Ge
       designTokensConfig: (output.tailwindExtensions as Record<string, unknown>) || {},
       errors,
       metadata: {
+        source: "figma",
         figmaFileId: designFile.id,
         figmaVersion: designFile.version,
         generatedAt: new Date().toISOString(),
@@ -497,6 +506,7 @@ export async function generateCodeFromDesign(designFile: DesignFile): Promise<Ge
       designTokensConfig: {},
       errors,
       metadata: {
+        source: "figma",
         figmaFileId: designFile.id,
         figmaVersion: designFile.version,
         generatedAt: new Date().toISOString(),
@@ -527,4 +537,176 @@ export async function generateSinglePage(
   };
 
   return generateCodeFromDesign(singlePageDesign);
+}
+
+// ─── Prompt-Based Page Generation ──────────────────────────
+
+import { createHash } from "node:crypto";
+
+function createPromptHash(prompt: string): string {
+  return createHash("sha256").update(prompt).digest("hex").slice(0, 8);
+}
+
+function buildPromptBasedUserPrompt(prompt: string): string {
+  return `Generate a complete, production-ready Next.js landing page based on this description:
+
+"${prompt}"
+
+## Instructions
+1. Derive a URL-friendly slug from the page topic (e.g., "erp-reporting", "product-launch")
+2. Create a complete page with these sections (at minimum):
+   - Navbar with logo, navigation links, and a primary CTA button
+   - Hero section with headline, subtitle, and CTA
+   - 2-3 content sections (benefits, features, testimonials, or similar — choose what fits the topic)
+   - FAQ section with 3-5 relevant questions
+   - CTA section with final call-to-action
+3. Write realistic, professional copy for every text element — no "Lorem ipsum"
+4. Use @martech/design-system components (Button, Card, Badge, Input, Separator, etc.)
+5. Import { cn } from "@martech/design-system" for class merging
+6. Import tracking helpers from "@/components/layout/SegmentScript"
+7. Wrap every section in <TrackedSection name="..."> from "@/components/sections/TrackedSection"
+8. Wire Segment tracking: trackButtonClick on buttons, trackLinkClick on links
+9. Use "use client" for components with tracking or interactivity
+10. Mobile-first responsive: base styles for mobile, then sm:/md:/lg:/xl: breakpoints
+11. Use ContaAzul brand colors: yellow #f9bd1d, blue #2687e9, dark #20262b, gray #35414b
+
+Return ONLY the JSON output with this structure:
+{
+  "components": [{ "filename": "...", "path": "components/sections/", "content": "..." }],
+  "pages": [{ "filename": "page.tsx", "path": "app/(generated)/slug/", "route": "/slug", "content": "..." }],
+  "tailwindExtensions": {}
+}`;
+}
+
+async function callOpenAIForPrompt(prompt: string): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
+
+  const model = process.env.OPENAI_MODEL || "gpt-4o";
+  log.info("Calling OpenAI for prompt-based generation", { model });
+
+  const systemPrompt = buildSystemPrompt();
+  const userPrompt = buildPromptBasedUserPrompt(prompt);
+
+  const systemTokens = estimateTokens(systemPrompt);
+  const userTokens = estimateTokens(userPrompt);
+  log.info("Prompt token estimate", { systemTokens, userTokens, total: systemTokens + userTokens });
+
+  const response = await fetch(OPENAI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      max_completion_tokens: 16000,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`OpenAI API error ${response.status}: ${body}`);
+  }
+
+  const data = (await response.json()) as {
+    choices: Array<{ message: { content: string | null }; finish_reason: string }>;
+    usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+  };
+
+  log.info("OpenAI response received", {
+    promptTokens: data.usage.prompt_tokens,
+    completionTokens: data.usage.completion_tokens,
+    totalTokens: data.usage.total_tokens,
+    finishReason: data.choices[0]?.finish_reason,
+  });
+
+  const content = data.choices[0]?.message?.content;
+  if (!content) throw new Error("No content in OpenAI response");
+
+  return content;
+}
+
+/**
+ * Generate a landing page from a text prompt.
+ * This is the PRIMARY page builder entry point.
+ */
+export async function generatePageFromPrompt(prompt: string): Promise<GenerationResult> {
+  const startTime = Date.now();
+  const promptHash = createPromptHash(prompt);
+  const errors: string[] = [];
+
+  try {
+    log.info("Generating page from prompt", { promptHash, promptLength: prompt.length });
+
+    const rawOutput = await callOpenAIForPrompt(prompt);
+    const output = parseGenerationOutput(rawOutput);
+
+    const pages: GeneratedPage[] = output.pages.map((p) => ({
+      filename: p.filename,
+      path: p.path,
+      route: p.route,
+      content: p.content,
+    }));
+
+    const components: GeneratedComponent[] = output.components.map((c) => ({
+      filename: c.filename,
+      path: c.path,
+      content: c.content,
+    }));
+
+    const durationMs = Date.now() - startTime;
+
+    log.info("Prompt-based generation complete", {
+      pageCount: pages.length,
+      componentCount: components.length,
+      durationMs,
+    });
+
+    return {
+      success: true,
+      pages,
+      components,
+      designTokensConfig: (output.tailwindExtensions as Record<string, unknown>) || {},
+      errors,
+      metadata: {
+        source: "prompt",
+        promptText: prompt,
+        promptHash,
+        generatedAt: new Date().toISOString(),
+        generationDurationMs: durationMs,
+        componentCount: components.length,
+        pageCount: pages.length,
+        tokenCount: 0,
+      },
+    };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    errors.push(errorMsg);
+    log.error("Prompt-based generation failed", { error: errorMsg });
+
+    return {
+      success: false,
+      pages: [],
+      components: [],
+      designTokensConfig: {},
+      errors,
+      metadata: {
+        source: "prompt",
+        promptText: prompt,
+        promptHash,
+        generatedAt: new Date().toISOString(),
+        generationDurationMs: Date.now() - startTime,
+        componentCount: 0,
+        pageCount: 0,
+        tokenCount: 0,
+      },
+    };
+  }
 }

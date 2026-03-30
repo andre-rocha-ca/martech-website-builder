@@ -1,20 +1,17 @@
 // ─── Figma Webhook Handler ──────────────────────────────────
-// Receives FILE_UPDATE events from Figma and routes them:
-//   • DS file changes  → dispatches GitHub Action (ds-sync workflow)
-//   • Page file changes → runs inline page generation pipeline
+// Receives FILE_UPDATE events from Figma and routes DS changes
+// to GitHub Actions for component sync.
+// Page generation is now prompt-driven via POST /api/generate.
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { createHmac } from "node:crypto";
 import type { FigmaWebhookPayload } from "@/lib/types/figma.types";
-import { extractDesignFromFigma } from "@/lib/services/figma.service";
-import { generateCodeFromDesign } from "@/lib/services/openai.service";
-import { gitPublish } from "@/lib/services/git.service";
 import { dispatchDSSync } from "@/lib/services/github.service";
 import { createLogger } from "@/lib/utils/logger";
 
 const log = createLogger("webhook-figma");
-type WebhookRoute = "ds-sync" | "page-generation";
+type WebhookRoute = "ds-sync";
 
 // ─── DS File Detection ──────────────────────────────────────
 
@@ -100,14 +97,9 @@ export async function POST(request: NextRequest) {
 
     if (isDSFile && isDSEvent) {
       route = "ds-sync";
-    } else if (!isDSFile && payload.event_type === "FILE_UPDATE") {
-      route = "page-generation";
-    } else if (payload.event_type === "LIBRARY_PUBLISH" && !isDSFile) {
-      ignoredReason = "LIBRARY_PUBLISH for non-DS file";
-    } else if (payload.event_type === "FILE_VERSION_UPDATE" && !isDSFile) {
-      ignoredReason = "FILE_VERSION_UPDATE for non-DS file";
     } else {
-      ignoredReason = "Unsupported event";
+      // Non-DS file updates are ignored — page generation is now prompt-driven via /api/generate
+      ignoredReason = `Non-DS event (${payload.event_type}) — use POST /api/generate for page creation`;
     }
 
     log.info("Routing webhook", {
@@ -190,42 +182,6 @@ async function processWebhookAsync(
 
       return;
     }
-
-    // ── Route: Page file → inline generation pipeline ──────────
-    log.info("Page file detected — running generation pipeline", {
-      requestId,
-      fileKey: payload.file_key,
-    });
-
-    // Step 1: Extract design from Figma
-    log.info("[1/3] Extracting design from Figma", { requestId });
-    const designFile = await extractDesignFromFigma(payload.file_key);
-
-    // Step 2: Generate code with OpenAI
-    log.info("[2/3] Generating code with OpenAI GPT-4o", { requestId });
-    const generationResult = await generateCodeFromDesign(designFile);
-
-    if (!generationResult.success) {
-      log.error("Code generation failed", {
-        requestId,
-        errors: generationResult.errors,
-      });
-      return;
-    }
-
-    // Step 3: Commit and push to git (triggers Amplify deploy)
-    log.info("[3/3] Publishing to git", { requestId });
-    const gitResult = await gitPublish(payload.file_key, generationResult);
-
-    const totalDuration = Date.now() - startTime;
-    log.info("Pipeline complete", {
-      requestId,
-      branch: gitResult.branchName,
-      commitSha: gitResult.commitSha,
-      filesWritten: gitResult.filesWritten,
-      previewUrl: gitResult.previewUrl,
-      totalDurationMs: totalDuration,
-    });
   } catch (err) {
     log.error("Pipeline error", {
       requestId,
