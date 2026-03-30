@@ -29,6 +29,9 @@ const nextConfig = {
     },
   },
 
+  // Standalone output for Amplify SSR deployment
+  output: "standalone",
+
   // Production optimizations
   poweredByHeader: false,
 

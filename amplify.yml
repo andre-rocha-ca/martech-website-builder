@@ -6,22 +6,21 @@ applications:
       phases:
         preBuild:
           commands:
-            # Use Node 22 (Amplify defaults to 18)
+            # Use Node 22
             - nvm install 22
             - nvm use 22
             - node --version
 
-            # Install pnpm (exact version matching packageManager field)
+            # Install pnpm (exact version from packageManager field)
             - npm install -g pnpm@9.15.0
-            - pnpm --version
 
-            # Install deps + build DS in one command (CWD resets between commands)
+            # Install all deps + build design system from monorepo root (one command to preserve CWD)
             - cd ../.. && pnpm install --frozen-lockfile && pnpm ds:build
 
         build:
           commands:
-            # Chain with pnpm install to ensure PATH includes node_modules/.bin
-            - cd ../.. && pnpm install && pnpm --filter @martech/web build
+            # Run next build directly from appRoot — pnpm symlinks make next available here
+            - npx next build
 
       artifacts:
         baseDirectory: .next
@@ -36,7 +35,3 @@ applications:
 
       buildSizeConfig:
         maxIndividualAsset: 50000000
-
-    # Environment variables — set in Amplify Console
-    # FIGMA_API_TOKEN, FIGMA_DS_FILE_KEY, FIGMA_WEBHOOK_SECRET
-    # OPENAI_API_KEY, OPENAI_MODEL, NEXT_PUBLIC_SEGMENT_WRITE_KEY, GITHUB_TOKEN
