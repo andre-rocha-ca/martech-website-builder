@@ -80,7 +80,7 @@ function FAQItem({
       </button>
 
       {/* CSS grid-rows accordion — no JS height measurement needed */}
-      <div className={`faq-body-grid${isOpen ? "faq-body-grid-open" : ""}`}>
+      <div className={isOpen ? "faq-body-grid open" : "faq-body-grid"}>
         <div className="min-h-0">
           <p
             className="pb-5 pr-12 text-[16px] leading-[26px] text-[#536574]"
