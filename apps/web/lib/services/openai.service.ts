@@ -561,7 +561,7 @@ function createPromptHash(prompt: string): string {
 }
 
 function buildPromptBasedUserPrompt(prompt: string): string {
-  return `Generate a complete, production-ready Next.js landing page based on this description:
+  return `Generate a PIXEL-PERFECT Conta Azul branded landing page based on this description:
 
 "${prompt}"
 
@@ -591,24 +591,74 @@ Available DS components:
 
 DO NOT create raw HTML buttons, cards, or inputs — ALWAYS use the DS components.
 
-## Brand Styling
-- Primary CTA: <Button size="lg" className="bg-[#f9bd1d] text-[#20262b] hover:bg-[#e5ab18] rounded-full px-8">
-- Secondary CTA: <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10 rounded-full px-8">
-- Hero backgrounds: bg-[#20262b] (dark) or bg-gradient-to-b from-[#20262b] to-[#134ca2]
+## CRITICAL: ContaAzul Branded Components (USE THESE — not generic shadcn)
+Import from "@martech/design-system":
+
+### CAButton — the primary CTA button (use instead of plain Button for CTAs)
+\`\`\`tsx
+import { CAButton } from "@martech/design-system";
+<CAButton color="amarelo" variant="primary" size="xlg" shape="round">teste grátis</CAButton>
+<CAButton color="azul" variant="primary" size="lg" shape="square">Comece agora</CAButton>
+<CAButton color="azul" variant="secondary" size="md" shape="round">Saiba mais</CAButton>
+\`\`\`
+Props: color="amarelo"|"azul", variant="primary"|"secondary", size="md"|"lg"|"xlg", shape="round"|"square"
+
+### CAHero — branded hero section
+\`\`\`tsx
+import { CAHero } from "@martech/design-system";
+<CAHero bg="gradient" contentAlign="center" badge="Relatórios" headline="Relatórios pro seu negócio crescer" highlightText="crescer" body="Acompanhe o desempenho..." ctaLabel="teste grátis" />
+\`\`\`
+Props: bg="gradient"|"blue"|"white"|"image", contentAlign="left"|"center", badge, headline, highlightText, body, ctaLabel, ctaHref, checkItems={["item1","item2"]}
+
+### CAFeatureItem — expandable feature accordion
+\`\`\`tsx
+import { CAFeatureItem } from "@martech/design-system";
+<CAFeatureItem title="Relatórios financeiros" body="Acompanhe vendas e despesas..." linkLabel="Saiba mais" linkHref="/recursos" open={true} />
+\`\`\`
+
+### CAPricingCard — pricing plan card with asymmetric border-radius
+\`\`\`tsx
+import { CAPricingCard } from "@martech/design-system";
+<CAPricingCard planName="Controle" subtitle="Microempreendedor" price="309,90" priceUnit="/mês" originalPrice="499,90" savings="R$ 190,00 por mês" ctaLabel="Assinar agora" />
+\`\`\`
+
+### CAWhatsAppButton — floating WhatsApp button (green, bottom-right)
+\`\`\`tsx
+import { CAWhatsAppButton } from "@martech/design-system";
+<CAWhatsAppButton phone="551140400606" label="Quero saber mais" />
+\`\`\`
+
+### CAButtonNav — navigation link with arrow icon
+\`\`\`tsx
+import { CAButtonNav } from "@martech/design-system";
+<CAButtonNav style="default">Funcionalidades</CAButtonNav>  {/* white text on dark bg */}
+<CAButtonNav style="cinza">Funcionalidades</CAButtonNav>    {/* dark text on light bg */}
+\`\`\`
+
+## Brand Styling Rules
+- Primary CTA: ALWAYS use <CAButton color="amarelo" variant="primary" size="xlg" shape="round"> (yellow, rounded)
+- Secondary CTA: <CAButton color="azul" variant="secondary" size="lg" shape="round">
+- Hero: ALWAYS use <CAHero bg="gradient"> with the blue gradient background
+- Features: use <CAFeatureItem> for expandable feature lists
+- Navbar: dark background (#20262b), white "Conta Azul" logo text, yellow CTA, white nav links
+- Hero gradient: linear-gradient(196.78deg, #205ed7 1.84%, #2687e9 37.96%, #00aff0 95.1%)
 - Section backgrounds: alternate bg-white and bg-[#f5f7fa]
-- Headings: font-family Raleway (use style={{ fontFamily: "'Raleway', sans-serif" }})
-- Body text: font-family Inter
-- Brand colors: yellow #f9bd1d, blue #2687e9, dark blue #134ca2, dark #20262b, gray #35414b, light gray #f5f7fa
+- Headings: Raleway font (style={{ fontFamily: "'Raleway', sans-serif" }}) — Light weight for headlines, ExtraBold for emphasis
+- Body: Ping Pong font (style={{ fontFamily: "'Ping Pong', 'Inter', sans-serif" }})
+- Brand colors: yellow #f9bd1d, blue #2687e9, dark blue #134ca2, deep dark #20262b, gray #35414b, light bg #f5f7fa
+- ALWAYS add a <CAWhatsAppButton /> at the bottom of the page
 
 ## Page Structure
-1. Derive a URL-friendly slug from the page topic (e.g., "relatorios-erp", "lancamento-produto")
-2. Create these sections:
-   - Navbar with Conta Azul logo text, nav links, and yellow CTA button
-   - Hero with gradient dark background, white text, headline, subtitle, and CTA
-   - 2-3 content sections with Card components (benefits, features, etc.)
-   - FAQ section with accordion-style questions
-   - CTA section with final call-to-action
-3. Write realistic, professional Brazilian Portuguese copy — no placeholder text
+1. Derive a URL-friendly slug (e.g., "relatorios-erp", "lancamento-produto")
+2. Structure:
+   - Navbar: dark bg, white logo, nav links with <CAButtonNav>, yellow <CAButton> CTA
+   - Hero: <CAHero bg="gradient"> with headline, body, CTA, optional check items
+   - Benefits: 3 Cards in a grid with icons and descriptions
+   - Features: <CAFeatureItem> accordion list (3-5 items)
+   - FAQ: accordion with 3-5 questions and answers
+   - CTA: final call-to-action section with gradient bg, <CAButton color="amarelo">
+   - <CAWhatsAppButton /> floating
+3. ALL text in Brazilian Portuguese — professional, empowering tone
 
 ## Technical Requirements
 1. Import tracking from "@/components/layout/SegmentScript": { trackButtonClick, trackLinkClick, trackEvent, trackSectionView }

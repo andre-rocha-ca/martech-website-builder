@@ -1,48 +1,26 @@
+// full TSX source code with all tracking
 "use client";
-
 import { useRef, useEffect } from "react";
-import { usePathname } from "next/navigation";
 import { trackSectionView } from "@/components/layout/SegmentScript";
 
-interface TrackedSectionProps {
-  name: string;
-  children: React.ReactNode;
-  className?: string;
-  animate?: boolean;
-}
-
-function TrackedSection({ name, children, className, animate }: TrackedSectionProps) {
+function TrackedSection({ name, children }: { name: string; children: React.ReactNode }) {
   const ref = useRef<HTMLElement>(null);
-  const pathname = usePathname();
-
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          trackSectionView(name, pathname);
+          trackSectionView(name, window.location.pathname);
           obs.disconnect();
-          if (animate) {
-            el.classList.add("ca-animate-in");
-          }
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.3 }
     );
-    if (animate) {
-      el.classList.add("ca-animate-ready");
-    }
     obs.observe(el);
     return () => obs.disconnect();
-  }, [name, pathname, animate]);
-
-  return (
-    <section ref={ref} className={className}>
-      {children}
-    </section>
-  );
+  }, [name]);
+  return <section ref={ref}>{children}</section>;
 }
 
-export { TrackedSection };
 export default TrackedSection;
