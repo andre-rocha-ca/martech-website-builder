@@ -89,29 +89,133 @@ interface FigmaFileResponse {
   styles: Record<string, { key: string; name: string; styleType: string }>;
 }
 
+// ─── Component Type Detection ──────────────────────────────
+
+type ComponentType = "section" | "atomic" | "icon";
+
+const ICON_NAMES = new Set([
+  "check",
+  "arrow_down",
+  "seta_up",
+  "seta_direita",
+  "seta_down",
+  "graph",
+  "account_circle",
+  "notifications",
+  "whatsapp",
+  "mail",
+  "clock",
+  "lock",
+  "video",
+]);
+
+const SECTION_PATTERNS = [/^section_/i, /^hero_/i, /^navbar_/i, /^hero$/i, /^navbar$/i];
+
+function detectComponentType(name: string): ComponentType {
+  const lower = name.toLowerCase();
+  if (ICON_NAMES.has(lower)) return "icon";
+  if (SECTION_PATTERNS.some((p) => p.test(lower))) return "section";
+  return "atomic";
+}
+
+function getComponentPath(name: string, type: ComponentType): string {
+  const fileName = toFileName(name);
+  if (type === "section") return `src/components/sections/${fileName}.tsx`;
+  return `src/components/ui/${fileName}.tsx`;
+}
+
+// ─── ContaAzul Design Tokens (for AI prompt) ───────────────
+
+const CA_DESIGN_CONTEXT = `
+## ContaAzul Design System Tokens
+
+Colors:
+  amarelo_amanhecer   #f9bd1d  (yellow primary CTA)
+  amarelo_entardecer  #f0a700  (yellow hover/active)
+  azul_ceu_aberto     #2687e9  (blue primary)
+  azul_ceu_amanhecer  #5aadf1  (blue hover)
+  azul_ceu_anoitecer  #1b69c8  (blue active/dark)
+  azul_profundo       #00084f  (deep blue for headers on white)
+  green/200           #1b9b45  (WhatsApp green)
+  green/100           #33cc66  (WhatsApp hover)
+  red/100             #ff3d32  (discount/strikethrough)
+  gray/600            #20262b  (dark text, dark backgrounds)
+  gray/500            #35414b  (body text on light bg)
+  gray/400            #536574  (disabled text)
+  gray/200            #b9c8d5  (disabled bg/border)
+  gray/100            #eff3f7  (light bg, CTA text on blue)
+  white               #ffffff
+
+Typography:
+  Headings: font-family "Raleway" — Light (300) for base, ExtraBold (800) for emphasis
+  Body: font-family "Ping Pong" — Regular (400), Medium (500), Bold (700), XBold (800)
+  Badge: Ping Pong Medium 12px/20px tracking-[1px] uppercase
+  Display: Raleway Light 48px/56px tracking-[-1.44px]
+  H1: Raleway ExtraBold 40px/48px tracking-[-1.2px]
+  H4: Raleway ExtraBold 20px/28px tracking-[-0.6px]
+  Body LG: Ping Pong Regular 18px/28px
+  Body MD: Ping Pong Regular 16px/24px
+  Body SM: Ping Pong Regular 14px/20px
+  CTA: Raleway ExtraBold 16px/24px tracking-[-0.16px]
+
+Gradients:
+  azul: linear-gradient(196.78deg, #205ed7 1.84%, #2687e9 37.96%, #00aff0 95.1%)
+
+Border Radius:
+  Buttons: rounded-[204px] (fully round pill)
+  Pricing cards: rounded-tl-[40px] rounded-tr-[40px] rounded-br-[80px] (asymmetric brand detail)
+  WhatsApp: rounded-bl-[12px] rounded-br-[12px] rounded-tr-[12px] (missing top-left corner)
+`;
+
 // ─── OpenAI Code Generation ─────────────────────────────────
 
 async function generateComponentCode(
   componentName: string,
-  figmaData: any,
-  existingCode: string | null
+  figmaData: unknown,
+  existingCode: string | null,
+  componentType: ComponentType = "atomic",
+  variantNames: string[] = []
 ): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
 
   const model = process.env.OPENAI_MODEL || "gpt-4o";
 
-  const systemPrompt = `You are an expert React/TypeScript developer maintaining a design system.
-You generate shadcn/ui-style components that follow these conventions:
+  const sectionGuidance =
+    componentType === "section"
+      ? `
+This is a SECTION-LEVEL component (full page section). It should:
+- Accept content via props (title, body, items[], etc.) — NOT hardcode text
+- Be self-contained: include padding, background, max-width container
+- Be responsive: mobile-first with sm:/md:/lg:/xl: breakpoints
+- Compose internal atomic components (CAButton, CAFeatureItem, etc.) from the DS
+`
+      : "";
 
-1. Use React.forwardRef for all components
-2. Use class-variance-authority (cva) for variant management
-3. Use the cn() utility from "../lib/utils" for class merging
-4. Import from @radix-ui primitives where applicable
-5. Export the component, its variants type, and its props interface
-6. Use Tailwind CSS utility classes with the shadcn colour system
-7. Components must be fully accessible (ARIA, keyboard navigation)
-8. Include JSDoc comments on the component and its props
+  const variantGuidance =
+    variantNames.length > 0
+      ? `\nThis component has ${variantNames.length} variants in Figma:\n${variantNames
+          .slice(0, 10)
+          .map((v) => `  - ${v}`)
+          .join("\n")}\nUse class-variance-authority (cva) to implement these variants as props.\n`
+      : "";
+
+  const systemPrompt = `You are an expert React/TypeScript developer building Conta Azul's design system.
+You generate PIXEL-PERFECT components that exactly match the Figma design.
+
+## CRITICAL CONVENTIONS — follow these EXACTLY:
+1. First line: "use client";
+2. Use React.forwardRef for all components
+3. Use class-variance-authority (cva) for variant management
+4. Import cn from "../lib/utils" (NOT @/lib/utils — this is a library package)
+5. Use EXACT hex color values from the design tokens — never approximate
+6. Use Tailwind CSS with arbitrary values for exact Figma dimensions: text-[20px], leading-[28px], tracking-[-0.6px], p-[32px]
+7. Use font-['Raleway:ExtraBold',sans-serif] for Raleway and font-['Ping_Pong:Regular',sans-serif] for Ping Pong
+8. Export the component as both named and default export
+9. Export the props interface and any variant types
+10. Include JSDoc with the Figma node reference and design tokens used
+${sectionGuidance}${variantGuidance}
+${CA_DESIGN_CONTEXT}
 
 Return ONLY the TypeScript/React source code. No markdown fences, no explanation.`;
 
@@ -124,12 +228,13 @@ ${existingCode}
 NEW FIGMA DATA:
 ${JSON.stringify(figmaData, null, 2)}
 
-Keep the same API surface (exports, prop names) but update styles, variants, and visual properties to match the new design. Return the complete updated file.`
-    : `Create a new shadcn/ui-style component called "${componentName}" based on this Figma data:
+Keep the same API surface (exports, prop names) but update styles to match. Return the complete updated file.`
+    : `Create a PIXEL-PERFECT component called "${componentName}" based on this Figma data:
 
 ${JSON.stringify(figmaData, null, 2)}
 
-Follow the shadcn/ui pattern exactly. Return the complete file.`;
+Match every dimension, color, font, spacing, and border-radius from the Figma data EXACTLY.
+Return the complete file.`;
 
   const res = await fetch(OPENAI_API_URL, {
     method: "POST",
@@ -523,16 +628,22 @@ async function main() {
 
   const currentComponents: FigmaComponentMapping[] = [];
 
-  // Add grouped components (with variants)
+  // Add grouped components (with variants) — skip icons
+  let skippedIcons = 0;
   for (const [, group] of groups) {
-    const fileName = toFileName(group.baseName);
+    const compType = detectComponentType(group.baseName);
+    if (compType === "icon") {
+      skippedIcons++;
+      continue;
+    }
+
     const exportName = toExportName(group.baseName);
 
     currentComponents.push({
       figmaNodeId: group.nodeId,
       figmaKey: group.key,
       figmaName: group.baseName,
-      localPath: `src/components/ui/${fileName}.tsx`,
+      localPath: getComponentPath(group.baseName, compType),
       exportName,
       lastSyncedVersion: fileData.version,
       lastSyncedAt: new Date().toISOString(),
@@ -541,21 +652,30 @@ async function main() {
     });
   }
 
-  // Add standalone components
+  // Add standalone components — skip icons
   for (const comp of standaloneComponents) {
-    const fileName = toFileName(comp.name);
+    const compType = detectComponentType(comp.name);
+    if (compType === "icon") {
+      skippedIcons++;
+      continue;
+    }
+
     const exportName = toExportName(comp.name);
 
     currentComponents.push({
       figmaNodeId: comp.node_id,
       figmaKey: comp.key,
       figmaName: comp.name,
-      localPath: `src/components/ui/${fileName}.tsx`,
+      localPath: getComponentPath(comp.name, compType),
       exportName,
       lastSyncedVersion: fileData.version,
       lastSyncedAt: new Date().toISOString(),
       hasVariants: false,
     });
+  }
+
+  if (skippedIcons > 0) {
+    console.log(`Skipped ${skippedIcons} icon components (already have SVGs)`);
   }
 
   console.log(
@@ -616,7 +736,14 @@ async function main() {
       }
     }
 
-    const code = await generateComponentCode(comp.exportName, figmaData, existingCode);
+    const compType = detectComponentType(comp.figmaName);
+    const code = await generateComponentCode(
+      comp.exportName,
+      figmaData,
+      existingCode,
+      compType,
+      comp.variantProperties ?? []
+    );
 
     if (!code || code.trim().length < 10) {
       console.warn(`  ⚠️  Skipping ${comp.exportName} — AI returned empty or invalid code`);
