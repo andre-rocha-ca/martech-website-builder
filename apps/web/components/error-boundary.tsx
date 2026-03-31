@@ -18,8 +18,11 @@ export default function ErrorBoundary({
     console.error("[ErrorBoundary]", error);
 
     // Track error in Segment
-    if (typeof window !== "undefined" && (window as any).analytics) {
-      (window as any).analytics.track("Error Occurred", {
+    const analytics = (
+      window as { analytics?: { track: (name: string, props: Record<string, unknown>) => void } }
+    ).analytics;
+    if (typeof window !== "undefined" && analytics) {
+      analytics.track("Error Occurred", {
         message: error.message,
         digest: error.digest,
         page: window.location.pathname,

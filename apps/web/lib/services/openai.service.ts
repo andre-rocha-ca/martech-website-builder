@@ -391,7 +391,7 @@ ${designFile.assets
     throw new Error("No content in OpenAI response");
   }
 
-  return content;
+  return { content, tokenCount: data.usage?.total_tokens ?? 0 };
 }
 
 // ─── Response Parser ────────────────────────────────────────
@@ -466,7 +466,7 @@ export async function generateCodeFromDesign(designFile: DesignFile): Promise<Ge
       frameScreenshots: Object.keys(designFile.frameScreenshots ?? {}).length,
     });
 
-    const rawOutput = await callOpenAI(designFile);
+    const { content: rawOutput, tokenCount } = await callOpenAI(designFile);
     const output = parseGenerationOutput(rawOutput);
 
     const pages: GeneratedPage[] = output.pages.map((p) => ({
@@ -504,7 +504,7 @@ export async function generateCodeFromDesign(designFile: DesignFile): Promise<Ge
         generationDurationMs: durationMs,
         componentCount: components.length,
         pageCount: pages.length,
-        tokenCount: 0,
+        tokenCount,
       },
     };
   } catch (err) {
@@ -643,7 +643,7 @@ async function callOpenAIForPrompt(prompt: string): Promise<string> {
   const content = data.choices[0]?.message?.content;
   if (!content) throw new Error("No content in OpenAI response");
 
-  return content;
+  return { content, tokenCount: data.usage?.total_tokens ?? 0 };
 }
 
 /**
@@ -658,7 +658,7 @@ export async function generatePageFromPrompt(prompt: string): Promise<Generation
   try {
     log.info("Generating page from prompt", { promptHash, promptLength: prompt.length });
 
-    const rawOutput = await callOpenAIForPrompt(prompt);
+    const { content: rawOutput, tokenCount } = await callOpenAIForPrompt(prompt);
     const output = parseGenerationOutput(rawOutput);
 
     const pages: GeneratedPage[] = output.pages.map((p) => ({
@@ -696,7 +696,7 @@ export async function generatePageFromPrompt(prompt: string): Promise<Generation
         generationDurationMs: durationMs,
         componentCount: components.length,
         pageCount: pages.length,
-        tokenCount: 0,
+        tokenCount,
       },
     };
   } catch (err) {

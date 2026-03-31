@@ -2,9 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Transpile the design system package (monorepo)
-  transpilePackages: ["@martech/design-system"],
-
   images: {
     remotePatterns: [
       {
@@ -41,6 +38,11 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
+          {
+            key: "Content-Security-Policy",
+            value:
+              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.segment.com; connect-src 'self' https://api.segment.io https://cdn.segment.com https://api.figma.com https://api.openai.com; img-src 'self' data: https://figma-alpha-api.s3.us-west-2.amazonaws.com https://s3-alpha.figma.com https://images.unsplash.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; frame-ancestors 'none';",
+          },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
