@@ -167,8 +167,14 @@ const CAPricingCard = React.forwardRef<HTMLDivElement, CAPricingCardProps>(
             <p
               className="w-full text-center text-[16px] leading-[24px] text-[#20262b]"
               style={{ fontFamily: "'Ping Pong', 'Inter', sans-serif" }}
-              dangerouslySetInnerHTML={{ __html: description.replace(/\n/g, "<br/>") }}
-            />
+            >
+              {description.split("\n").map((line, i) => (
+                <span key={i}>
+                  {i > 0 && <br />}
+                  {line}
+                </span>
+              ))}
+            </p>
             <div className="h-px w-full bg-[#e2e8f0]" />
             {userAccess && (
               <div className="flex w-full items-center justify-center gap-1">

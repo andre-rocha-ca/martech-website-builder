@@ -168,7 +168,12 @@ Follow the shadcn/ui pattern exactly. Return the complete file.`;
 async function loadManifest(): Promise<SyncManifest | null> {
   if (!existsSync(MANIFEST_PATH)) return null;
   const raw = await readFile(MANIFEST_PATH, "utf-8");
-  return JSON.parse(raw) as SyncManifest;
+  try {
+    return JSON.parse(raw) as SyncManifest;
+  } catch {
+    console.warn("Manifest file corrupted — treating as first sync");
+    return null;
+  }
 }
 
 async function saveManifest(manifest: SyncManifest): Promise<void> {
@@ -612,6 +617,11 @@ async function main() {
     }
 
     const code = await generateComponentCode(comp.exportName, figmaData, existingCode);
+
+    if (!code || code.trim().length < 10) {
+      console.warn(`  ⚠️  Skipping ${comp.exportName} — AI returned empty or invalid code`);
+      continue;
+    }
 
     const fullPath = path.join(DS_ROOT, comp.localPath);
     await mkdir(path.dirname(fullPath), { recursive: true });
