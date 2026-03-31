@@ -118,8 +118,51 @@ function detectComponentType(name: string): ComponentType {
   return "atomic";
 }
 
+// Existing shadcn components that should NOT be overwritten by Figma sync
+const PROTECTED_FILENAMES = new Set([
+  "button",
+  "badge",
+  "card",
+  "input",
+  "label",
+  "separator",
+  "accordion",
+  "alert",
+  "alert-dialog",
+  "aspect-ratio",
+  "avatar",
+  "checkbox",
+  "command",
+  "dialog",
+  "dropdown-menu",
+  "form",
+  "hover-card",
+  "navigation-menu",
+  "popover",
+  "progress",
+  "radio-group",
+  "scroll-area",
+  "select",
+  "sheet",
+  "skeleton",
+  "slider",
+  "switch",
+  "table",
+  "tabs",
+  "textarea",
+  "toast",
+  "toaster",
+  "tooltip",
+]);
+
 function getComponentPath(name: string, type: ComponentType): string {
-  const fileName = toFileName(name);
+  let fileName = toFileName(name);
+
+  // Prefix with "ca-" if the filename would collide with an existing shadcn component
+  if (PROTECTED_FILENAMES.has(fileName) && !fileName.startsWith("ca-")) {
+    fileName = `ca-${fileName}`;
+  }
+
   if (type === "section") return `src/components/sections/${fileName}.tsx`;
   return `src/components/ui/${fileName}.tsx`;
 }
