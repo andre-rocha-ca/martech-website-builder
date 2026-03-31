@@ -565,25 +565,53 @@ function buildPromptBasedUserPrompt(prompt: string): string {
 
 "${prompt}"
 
-## Instructions
-1. Derive a URL-friendly slug from the page topic (e.g., "erp-reporting", "product-launch")
-2. Create a complete page with these sections (at minimum):
-   - Navbar with logo, navigation links, and a primary CTA button
-   - Hero section with headline, subtitle, and CTA
-   - 2-3 content sections (benefits, features, testimonials, or similar — choose what fits the topic)
-   - FAQ section with 3-5 relevant questions
-   - CTA section with final call-to-action
-3. Write realistic, professional copy for every text element — no "Lorem ipsum"
-4. Use @martech/design-system components (Button, Card, Badge, Input, Separator, etc.)
-5. Import { cn } from "@martech/design-system" for class merging
-6. Import tracking helpers from "@/components/layout/SegmentScript"
-7. Wrap every section in <TrackedSection name="..."> from "@/components/sections/TrackedSection"
-8. Wire Segment tracking: trackButtonClick on buttons, trackLinkClick on links
-9. Use "use client" for components with tracking or interactivity
-10. Mobile-first responsive: base styles for mobile, then sm:/md:/lg:/xl: breakpoints
-11. Use ContaAzul brand colors: yellow #f9bd1d, blue #2687e9, dark #20262b, gray #35414b
+## CRITICAL: Language & Brand
+- ALL text content MUST be in Brazilian Portuguese (pt-BR)
+- This is a ContaAzul product — a Brazilian ERP/accounting SaaS company
+- Use ContaAzul brand voice: professional, friendly, clear, empowering small businesses
+- Brand name: "Conta Azul" (with space)
+- CTA examples: "Teste grátis", "Comece agora", "Fale com um especialista"
 
-Return ONLY the JSON output with this structure:
+## CRITICAL: Use Design System Components
+You MUST import and use these components from "@martech/design-system":
+- Button (variants: default, outline, secondary, ghost, link; sizes: sm, default, lg)
+- Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter
+- Badge (variants: default, secondary, outline, destructive)
+- Separator
+- Input, Label (for forms)
+- Import { cn } from "@martech/design-system" for class merging
+
+DO NOT create raw HTML buttons, cards, or inputs — ALWAYS use the DS components.
+
+## Brand Styling
+- Primary CTA: <Button size="lg" className="bg-[#f9bd1d] text-[#20262b] hover:bg-[#e5ab18] rounded-full px-8">
+- Secondary CTA: <Button variant="outline" size="lg" className="border-white text-white hover:bg-white/10 rounded-full px-8">
+- Hero backgrounds: bg-[#20262b] (dark) or bg-gradient-to-b from-[#20262b] to-[#134ca2]
+- Section backgrounds: alternate bg-white and bg-[#f5f7fa]
+- Headings: font-family Raleway (use style={{ fontFamily: "'Raleway', sans-serif" }})
+- Body text: font-family Inter
+- Brand colors: yellow #f9bd1d, blue #2687e9, dark blue #134ca2, dark #20262b, gray #35414b, light gray #f5f7fa
+
+## Page Structure
+1. Derive a URL-friendly slug from the page topic (e.g., "relatorios-erp", "lancamento-produto")
+2. Create these sections:
+   - Navbar with Conta Azul logo text, nav links, and yellow CTA button
+   - Hero with gradient dark background, white text, headline, subtitle, and CTA
+   - 2-3 content sections with Card components (benefits, features, etc.)
+   - FAQ section with accordion-style questions
+   - CTA section with final call-to-action
+3. Write realistic, professional Brazilian Portuguese copy — no placeholder text
+
+## Technical Requirements
+1. Import tracking from "@/components/layout/SegmentScript": { trackButtonClick, trackLinkClick, trackEvent, trackSectionView }
+2. Import TrackedSection from "@/components/sections/TrackedSection" (default import)
+3. Wrap every major section in <TrackedSection name="...">
+4. Wire trackButtonClick on every Button onClick
+5. Use "use client" directive at the top of every component file
+6. Mobile-first: base styles for mobile, then sm:/md:/lg:/xl: breakpoints
+7. Use Next.js App Router conventions (default export for page)
+
+Return ONLY the JSON output:
 {
   "components": [{ "filename": "...", "path": "components/sections/", "content": "..." }],
   "pages": [{ "filename": "page.tsx", "path": "app/(generated)/slug/", "route": "/slug", "content": "..." }],

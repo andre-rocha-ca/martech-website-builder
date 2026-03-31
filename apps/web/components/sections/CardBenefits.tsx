@@ -1,6 +1,5 @@
 // CardBenefits component with tracking
 import { Card, CardHeader, CardTitle, CardDescription } from "@martech/design-system";
-import { trackEvent } from "@/components/layout/SegmentScript";
 
 export default function CardBenefits() {
   return (

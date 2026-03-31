@@ -6,8 +6,6 @@
 // This dynamic route catches any slugs that don't have a
 // pre-generated static file, showing a "not yet generated" state.
 
-import { notFound } from "next/navigation";
-
 interface PageProps {
   params: Promise<{ "page-slug": string }>;
 }

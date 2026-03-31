@@ -7,7 +7,7 @@
 
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useCallback, Suspense } from "react";
+import { useEffect, useRef, Suspense } from "react";
 
 const WRITE_KEY = process.env.NEXT_PUBLIC_SEGMENT_WRITE_KEY || "";
 
