@@ -250,7 +250,7 @@ You generate PIXEL-PERFECT components that exactly match the Figma design.
 1. First line: "use client";
 2. Use React.forwardRef for all components
 3. Use class-variance-authority (cva) for variant management
-4. Import cn from "../lib/utils" (NOT @/lib/utils — this is a library package)
+4. Import { cn } from "../lib/utils" for ui/ components, or { cn } from "../../lib/utils" for sections/ components — it is a NAMED export, NOT default. NEVER use: import cn from — ALWAYS use: import { cn } from
 5. Use EXACT hex color values from the design tokens — never approximate
 6. Use Tailwind CSS with arbitrary values for exact Figma dimensions: text-[20px], leading-[28px], tracking-[-0.6px], p-[32px]
 7. Use font-['Raleway:ExtraBold',sans-serif] for Raleway and font-['Ping_Pong:Regular',sans-serif] for Ping Pong
@@ -275,6 +275,9 @@ Keep the same API surface (exports, prop names) but update styles to match. Retu
     : `Create a PIXEL-PERFECT component called "${componentName}" based on this Figma data:
 
 ${JSON.stringify(figmaData, null, 2)}
+
+IMPORTANT — use this EXACT import for cn:
+import { cn } from "${componentType === "section" ? "../../lib/utils" : "../lib/utils"}";
 
 Match every dimension, color, font, spacing, and border-radius from the Figma data EXACTLY.
 Return the complete file.`;
