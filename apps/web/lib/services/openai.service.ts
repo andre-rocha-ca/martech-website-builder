@@ -572,14 +572,22 @@ function buildPromptBasedUserPrompt(prompt: string): string {
 - Brand name: "Conta Azul" (with space)
 - CTA examples: "Teste grátis", "Comece agora", "Fale com um especialista"
 
-## CRITICAL: Use Design System Components
-You MUST import and use these components from "@martech/design-system":
+## CRITICAL: Imports — Every component used MUST be imported
+You MUST add this exact import line at the top of every page/component file, including ALL components you use:
+
+\`\`\`tsx
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Badge, Separator, Input, Label, cn } from "@martech/design-system";
+\`\`\`
+
+Remove any component you don't use from the import, but NEVER use a component without importing it first.
+If you use Card, you MUST import Card. If you use Badge, you MUST import Badge. This is the #1 rule.
+
+Available DS components:
 - Button (variants: default, outline, secondary, ghost, link; sizes: sm, default, lg)
 - Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter
 - Badge (variants: default, secondary, outline, destructive)
 - Separator
 - Input, Label (for forms)
-- Import { cn } from "@martech/design-system" for class merging
 
 DO NOT create raw HTML buttons, cards, or inputs — ALWAYS use the DS components.
 
