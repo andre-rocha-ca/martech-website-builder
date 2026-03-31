@@ -5,7 +5,7 @@
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { createHmac } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import type { FigmaWebhookPayload } from "@/lib/types/figma.types";
 import { dispatchDSSync } from "@/lib/services/github.service";
 import { createLogger } from "@/lib/utils/logger";
@@ -36,21 +36,21 @@ function isDesignSystemFile(fileKey: string): boolean {
 function verifySignature(body: string, signature: string): boolean {
   const secret = process.env.FIGMA_WEBHOOK_SECRET;
   if (!secret) {
-    log.warn("FIGMA_WEBHOOK_SECRET not set — skipping verification");
-    return true; // Allow in development
+    if (process.env.NODE_ENV === "production") {
+      log.error("FIGMA_WEBHOOK_SECRET not set in production — rejecting request");
+      return false;
+    }
+    log.warn("FIGMA_WEBHOOK_SECRET not set — skipping verification in development");
+    return true;
   }
 
   const hmac = createHmac("sha256", secret);
   hmac.update(body);
-  const expected = hmac.digest("hex");
+  const expectedBuf = hmac.digest();
+  const signatureBuf = Buffer.from(signature, "hex");
 
-  // Constant-time comparison
-  if (expected.length !== signature.length) return false;
-  let result = 0;
-  for (let i = 0; i < expected.length; i++) {
-    result |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
-  }
-  return result === 0;
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return timingSafeEqual(expectedBuf, signatureBuf);
 }
 
 // ─── POST Handler ───────────────────────────────────────────

@@ -9,7 +9,7 @@ applications:
           commands:
             - nvm install 22
             - nvm use 22
-            - npm install -g pnpm
+            - npm install -g pnpm@9.15.0
             - pnpm install --frozen-lockfile
             - pnpm ds:build
         build:

@@ -18,6 +18,10 @@ on:
   schedule:
     - cron: "0 9 * * 1-5"
 
+concurrency:
+  group: ds-sync
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -52,18 +56,22 @@ jobs:
 
       - name: Identify trigger source
         id: trigger
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PAYLOAD_FILE_KEY: ${{ github.event.client_payload.file_key }}
+          PAYLOAD_TRIGGERED_BY: ${{ github.event.client_payload.triggered_by }}
         run: |
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+          if [ "$EVENT_NAME" = "repository_dispatch" ]; then
             echo "source=figma-webhook" >> $GITHUB_OUTPUT
-            echo "file_key=${{ github.event.client_payload.file_key }}" >> $GITHUB_OUTPUT
-            echo "triggered_by=${{ github.event.client_payload.triggered_by }}" >> $GITHUB_OUTPUT
-            echo "🔔 Triggered by Figma webhook (file: ${{ github.event.client_payload.file_key }})"
-          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "file_key=${PAYLOAD_FILE_KEY}" >> $GITHUB_OUTPUT
+            echo "triggered_by=${PAYLOAD_TRIGGERED_BY}" >> $GITHUB_OUTPUT
+            echo "Triggered by Figma webhook (file: ${PAYLOAD_FILE_KEY})"
+          elif [ "$EVENT_NAME" = "schedule" ]; then
             echo "source=schedule" >> $GITHUB_OUTPUT
-            echo "⏰ Triggered by daily schedule"
+            echo "Triggered by daily schedule"
           else
             echo "source=manual" >> $GITHUB_OUTPUT
-            echo "🖐️ Triggered manually"
+            echo "Triggered manually"
           fi
 
       - name: Run Figma Sync
@@ -77,7 +85,7 @@ jobs:
           FIGMA_API_TOKEN: ${{ secrets.FIGMA_API_TOKEN }}
           FIGMA_DS_FILE_KEY: ${{ github.event.client_payload.file_key || secrets.FIGMA_DS_FILE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4o' }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4o' }}
 
       - name: Build Design System
         if: ${{ inputs.dry_run != 'true' }}

@@ -5,6 +5,9 @@ on:
     branches:
       - "design/**"
 
+permissions:
+  contents: read
+
 concurrency:
   group: design-review-${{ github.ref }}
   cancel-in-progress: true

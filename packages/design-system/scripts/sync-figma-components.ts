@@ -302,26 +302,53 @@ export const ${exportName.charAt(0).toLowerCase() + exportName.slice(1)}Doc: Com
 // ─── Barrel Export Regeneration ─────────────────────────────
 
 async function regenerateIndex(components: FigmaComponentMapping[]): Promise<void> {
-  const lines = [
-    "// ─── @martech/design-system ─────────────────────────────────",
-    "// Auto-generated barrel export — do not edit manually.",
-    "// Run `pnpm ds:sync` to regenerate from Figma.",
-    "",
-    "// Utilities",
-    'export { cn } from "./lib/utils";',
-    "",
-    "// Design Tokens",
-    'export { designTokens, type DesignTokenConfig } from "./tokens/design-tokens";',
-    "",
-    "// UI Components",
-  ];
-
-  for (const comp of components) {
-    const relPath = comp.localPath.replace(/^src\//, "./").replace(/\.tsx$/, "");
-    lines.push(`export * from "${relPath}";`);
+  // Read existing index to preserve manual exports (docs, types, icons, etc.)
+  let existingContent = "";
+  try {
+    existingContent = await readFile(INDEX_PATH, "utf-8");
+  } catch {
+    // No existing file — will create from scratch
   }
 
-  await writeFile(INDEX_PATH, lines.join("\n") + "\n", "utf-8");
+  // Build set of new Figma component export lines
+  const figmaExports = new Set<string>();
+  for (const comp of components) {
+    const relPath = comp.localPath.replace(/^src\//, "./").replace(/\.tsx$/, "");
+    figmaExports.add(`export * from "${relPath}";`);
+  }
+
+  if (existingContent) {
+    // Append only new exports that don't already exist in the file
+    const newLines: string[] = [];
+    for (const exportLine of figmaExports) {
+      if (!existingContent.includes(exportLine)) {
+        newLines.push(exportLine);
+      }
+    }
+
+    if (newLines.length > 0) {
+      const appendSection = [
+        "",
+        "// ─── Figma-synced components (auto-generated) ─────────────",
+        ...newLines,
+      ].join("\n");
+      await writeFile(INDEX_PATH, existingContent.trimEnd() + "\n" + appendSection + "\n", "utf-8");
+      console.log(`  Appended ${newLines.length} new exports to index.ts`);
+    } else {
+      console.log("  All Figma components already exported in index.ts");
+    }
+  } else {
+    // No existing file — create minimal index
+    const lines = [
+      "// ─── @martech/design-system ─────────────────────────────────",
+      'export { cn } from "./lib/utils";',
+      'export { designTokens, type DesignTokenConfig } from "./tokens/design-tokens";',
+      "",
+      "// ─── Figma-synced components ────────────────────────────────",
+      ...Array.from(figmaExports),
+    ];
+    await writeFile(INDEX_PATH, lines.join("\n") + "\n", "utf-8");
+  }
 }
 
 async function regenerateDocsIndex(components: FigmaComponentMapping[]): Promise<void> {

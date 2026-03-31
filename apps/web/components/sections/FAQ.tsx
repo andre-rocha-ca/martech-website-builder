@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { trackEvent } from "@/components/layout/SegmentScript";
 import { TrackedSection } from "@/components/sections/TrackedSection";
 import { imgArrowDown } from "@/components/sections/assets";
@@ -44,9 +45,11 @@ function FAQItem({
   isOpen: boolean;
   onToggle: () => void;
 }) {
+  const pathname = usePathname();
   return (
     <div className="border-b border-[#e2e8f0] last:border-b-0">
       <button
+        type="button"
         className="group flex w-full items-center justify-between gap-4 py-5 text-left"
         onClick={() => {
           onToggle();
@@ -54,7 +57,7 @@ function FAQItem({
             question: item.question,
             action: isOpen ? "close" : "open",
             index,
-            page: "/relatorios",
+            page: pathname,
           });
         }}
         aria-expanded={isOpen}
@@ -77,7 +80,7 @@ function FAQItem({
       </button>
 
       {/* CSS grid-rows accordion — no JS height measurement needed */}
-      <div className={`faq-body-grid${isOpen ? "open" : ""}`}>
+      <div className={`faq-body-grid${isOpen ? "faq-body-grid-open" : ""}`}>
         <div className="min-h-0">
           <p
             className="pb-5 pr-12 text-[16px] leading-[26px] text-[#536574]"

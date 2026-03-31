@@ -4,6 +4,7 @@
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { generatePageFromPrompt } from "@/lib/services/openai.service";
 import { gitPublish } from "@/lib/services/git.service";
@@ -28,8 +29,10 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.GENERATE_API_KEY;
     if (apiKey) {
       const authHeader = request.headers.get("authorization");
-      const token = authHeader?.replace("Bearer ", "");
-      if (token !== apiKey) {
+      const token = authHeader?.replace("Bearer ", "") ?? "";
+      const tokenBuf = Buffer.from(token);
+      const keyBuf = Buffer.from(apiKey);
+      if (tokenBuf.length !== keyBuf.length || !timingSafeEqual(tokenBuf, keyBuf)) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }

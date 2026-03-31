@@ -10,11 +10,7 @@ import type {
   DesignTokens,
   DesignAsset,
 } from "../types/design.types";
-import {
-  figmaColorToHex,
-  fontWeightToTailwind,
-  layoutToTailwindClasses,
-} from "../utils/tailwind-converter";
+import { figmaColorToHex } from "../utils/tailwind-converter";
 import { createLogger } from "../utils/logger";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
@@ -460,6 +456,10 @@ async function downloadAssets(fileKey: string, nodeIds: string[]): Promise<Desig
 
       try {
         const imgResponse = await fetch(imageUrl);
+        if (!imgResponse.ok) {
+          log.warn("Image download failed", { nodeId, status: imgResponse.status });
+          continue;
+        }
         const buffer = Buffer.from(await imgResponse.arrayBuffer());
 
         await mkdir(path.dirname(localPath), { recursive: true });

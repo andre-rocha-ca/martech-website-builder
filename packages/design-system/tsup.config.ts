@@ -1,15 +1,22 @@
 import { defineConfig } from "tsup";
-import { readFileSync, writeFileSync, readdirSync } from "fs";
+import { readFileSync, writeFileSync, readdirSync, statSync } from "fs";
 import { join } from "path";
 
 function injectUseClient() {
   const distDir = join(__dirname, "dist");
-  for (const file of readdirSync(distDir)) {
-    if (file.endsWith(".js") || file.endsWith(".mjs")) {
-      const filePath = join(distDir, file);
-      const content = readFileSync(filePath, "utf-8");
+  injectInDir(distDir);
+}
+
+function injectInDir(dir: string) {
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    const stat = statSync(fullPath);
+    if (stat.isDirectory()) {
+      injectInDir(fullPath);
+    } else if (entry.endsWith(".js") || entry.endsWith(".mjs")) {
+      const content = readFileSync(fullPath, "utf-8");
       if (!content.startsWith('"use client"')) {
-        writeFileSync(filePath, `"use client";\n${content}`);
+        writeFileSync(fullPath, `"use client";\n${content}`);
       }
     }
   }

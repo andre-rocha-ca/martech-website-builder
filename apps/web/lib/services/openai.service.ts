@@ -411,6 +411,27 @@ interface GenerationOutput {
   tailwindExtensions?: Record<string, unknown>;
 }
 
+import { z } from "zod";
+
+const generationOutputSchema = z.object({
+  components: z.array(
+    z.object({
+      filename: z.string(),
+      path: z.string(),
+      content: z.string(),
+    })
+  ),
+  pages: z.array(
+    z.object({
+      filename: z.string(),
+      path: z.string(),
+      route: z.string(),
+      content: z.string(),
+    })
+  ),
+  tailwindExtensions: z.record(z.unknown()).optional(),
+});
+
 function parseGenerationOutput(raw: string): GenerationOutput {
   let jsonStr = raw.trim();
 
@@ -420,16 +441,8 @@ function parseGenerationOutput(raw: string): GenerationOutput {
   }
 
   try {
-    const parsed = JSON.parse(jsonStr) as GenerationOutput;
-
-    if (!parsed.components || !Array.isArray(parsed.components)) {
-      throw new Error("Missing or invalid 'components' array");
-    }
-    if (!parsed.pages || !Array.isArray(parsed.pages)) {
-      throw new Error("Missing or invalid 'pages' array");
-    }
-
-    return parsed;
+    const parsed = JSON.parse(jsonStr);
+    return generationOutputSchema.parse(parsed);
   } catch (err) {
     log.error("Failed to parse OpenAI output", {
       error: err instanceof Error ? err.message : String(err),

@@ -83,10 +83,19 @@ export async function createDesignBranch(identifier: string): Promise<string> {
  */
 export async function writeGeneratedFiles(result: GenerationResult): Promise<string[]> {
   const writtenFiles: string[] = [];
+  const resolvedRoot = path.resolve(REPO_ROOT);
+
+  function assertSafePath(filePath: string): void {
+    const resolved = path.resolve(filePath);
+    if (!resolved.startsWith(resolvedRoot + path.sep)) {
+      throw new Error(`Path traversal detected: ${resolved} escapes repo root`);
+    }
+  }
 
   // Write components
   for (const component of result.components) {
     const filePath = path.join(REPO_ROOT, component.path, component.filename);
+    assertSafePath(filePath);
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, component.content, "utf-8");
     writtenFiles.push(path.join(component.path, component.filename));
@@ -96,6 +105,7 @@ export async function writeGeneratedFiles(result: GenerationResult): Promise<str
   // Write pages
   for (const page of result.pages) {
     const filePath = path.join(REPO_ROOT, page.path, page.filename);
+    assertSafePath(filePath);
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, page.content, "utf-8");
     writtenFiles.push(path.join(page.path, page.filename));
@@ -133,8 +143,8 @@ export async function commitAndPush(
   // Also stage any downloaded assets
   try {
     await git.add("public/assets/");
-  } catch {
-    // No assets to stage
+  } catch (err) {
+    log.debug("No assets to stage", { error: err instanceof Error ? err.message : String(err) });
   }
 
   // Build commit message based on source
